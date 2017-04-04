@@ -1,10 +1,14 @@
 package a00965170.comp3717.bcit.ca.browser;
 
 import android.app.ListActivity;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Patterns;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -59,6 +63,10 @@ public class MainActivity extends ListActivity
                         }
                     }
                 }
+                else if (result == null || result.size() == 0)
+                {
+                    textView.setText("No json found or empty array");
+                }
             }
         });
     }
@@ -66,14 +74,53 @@ public class MainActivity extends ListActivity
     @Override
     protected void onListItemClick(ListView list, View view, int position, long id) {
         super.onListItemClick(list, view, position, id);
-        String selectedItem = (String) getListView().getItemAtPosition(position);
+        if(isInternetAvailable(this))
+        {
+            String selectedItem = (String) getListView().getItemAtPosition(position);
 
-        String url;
-        url = links.get((int)id).url;
+            String url;
+            url = links.get((int) id).url;
+            if(!Patterns.WEB_URL.matcher(url).matches())
+            {
+                textView.setText("Invalid URL");
+                return;
+            }
+            final Intent intent;
+            intent = new Intent(this, WebActivity.class);
+            intent.putExtra("url", url);
+            startActivityForResult(intent, 1);
+        }
+        else
+        {
+            textView.setText("Sorry there is no internet connection!");
+        }
+    }
 
-        final Intent intent;
-        intent = new Intent(this, WebActivity.class);
-        intent.putExtra("url", url);
-        startActivity(intent);
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch(requestCode) {
+            case (1) : {
+                if (resultCode == 1) {
+                    textView.setText(data.getStringExtra("error"));
+                }
+                break;
+            }
+        }
+    }
+
+    public static boolean isInternetAvailable(Context context)
+    {
+        NetworkInfo info = ((ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
+
+        if (info == null)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
     }
 }
