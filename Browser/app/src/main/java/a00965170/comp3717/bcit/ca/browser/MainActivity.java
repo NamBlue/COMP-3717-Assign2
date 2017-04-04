@@ -1,13 +1,31 @@
 package a00965170.comp3717.bcit.ca.browser;
 
+import android.app.ListActivity;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.koushikdutta.async.future.FutureCallback;
+import com.koushikdutta.ion.Ion;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends ListActivity
 {
     private TextView textView;
+    private List<String> listValues;
+    private List<Link> links;
+    private Gson gson;
+    private  ArrayAdapter<String> myAdapter;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -15,40 +33,47 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
 
         textView = (TextView)findViewById(R.id.myText);
+        listValues = new ArrayList<String>();
+        links = new ArrayList<>();
+        gson = new Gson();
 
-        DelayDisplayTask ddt = new DelayDisplayTask();
+        myAdapter = new ArrayAdapter<String>(this,
+                R.layout.row_layout, R.id.listText, listValues);
+        setListAdapter(myAdapter);
 
-        ddt.execute("works", "like", "a", "charm");
-
-
-
-
-    }
-
-    private class DelayDisplayTask extends AsyncTask<String, Void, Void>
-    {
-        @Override
-        protected Void doInBackground(final String... params)
+        Ion.with(getBaseContext()).load("http://max.bcit.ca/comp.json")
+                .asJsonArray().setCallback(new FutureCallback<JsonArray>()
         {
-            for(int i = 0; i < params.length; i++){
-                final int j = i;
-                runOnUiThread(new Runnable()
+            @Override
+            public void onCompleted(Exception e, JsonArray result)
+            {
+                if (result != null)
                 {
-                    @Override
-                    public void run()
+                    for (int i = 0; i < result.size(); i++)
                     {
-                        textView.setText(params[j]);
+                        Link temp = gson.fromJson(result.get(i), Link.class);
+                        if (temp != null)
+                        {
+                            links.add(temp);
+                            myAdapter.add(temp.name);
+                        }
                     }
-                });
-                try
-                {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e)
-                {
-                    e.printStackTrace();
                 }
             }
-            return null;
-        }
+        });
+    }
+
+    @Override
+    protected void onListItemClick(ListView list, View view, int position, long id) {
+        super.onListItemClick(list, view, position, id);
+        String selectedItem = (String) getListView().getItemAtPosition(position);
+
+        String url;
+        url = links.get((int)id).url;
+
+        final Intent intent;
+        intent = new Intent(this, WebActivity.class);
+        intent.putExtra("url", url);
+        startActivity(intent);
     }
 }
